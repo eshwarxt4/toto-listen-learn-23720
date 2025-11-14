@@ -1,0 +1,105 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Warm, earthy educational palette */
+    --background: 42 47% 97%;
+    --foreground: 25 40% 20%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 25 40% 20%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 25 40% 20%;
+
+    /* Terracotta primary */
+    --primary: 14 65% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Sage green secondary */
+    --secondary: 140 30% 60%;
+    --secondary-foreground: 25 40% 20%;
+
+    /* Warm cream muted */
+    --muted: 40 40% 90%;
+    --muted-foreground: 25 25% 45%;
+
+    /* Coral accent */
+    --accent: 6 78% 65%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 40 30% 85%;
+    --input: 40 30% 85%;
+    --ring: 14 65% 55%;
+
+    --radius: 1rem;
+
+    /* Success/celebration */
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+
+    /* Custom tokens for educational UI */
+    --celebration: 45 100% 60%;
+    --progress-bg: 140 20% 85%;
+    --progress-fill: 140 45% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+
+  /* Educational UI patterns */
+  .celebration-star {
+    color: hsl(var(--celebration));
+    animation: bounce-subtle 1s ease-in-out infinite;
+  }
+
+  .audio-button {
+    transition: all 0.3s ease;
+  }
+  
+  .audio-button:hover {
+    transform: scale(1.1);
+  }
+  
+  .audio-button:active {
+    transform: scale(0.95);
+  }
+
+  .card-elevated {
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    transition: box-shadow 0.3s ease;
+  }
+  
+  .card-elevated:hover {
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  }
+
+  .progress-bar {
+    background-color: hsl(var(--progress-bg));
+    border-radius: 9999px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    background-color: hsl(var(--progress-fill));
+    height: 100%;
+    transition: all 0.5s ease;
+    border-radius: 9999px;
+  }
+}
