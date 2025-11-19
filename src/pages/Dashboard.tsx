@@ -99,7 +99,7 @@ export default function Dashboard() {
   const quickLinks = [
     { icon: BookOpen, label: "Stories", path: "/stories", color: "text-primary" },
     { icon: Sparkles, label: "Words", path: "/words", color: "text-accent" },
-    { icon: Library, label: "Cultural Corner", path: "/cultural", color: "text-secondary" },
+    { icon: Library, label: "Folk Stories", path: "/cultural", color: "text-secondary" },
     { icon: Trophy, label: "Progress", path: "/progress", color: "text-success" },
   ];
 

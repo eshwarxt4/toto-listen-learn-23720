@@ -1,45 +1,52 @@
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Music, BookOpen } from "lucide-react";
+import { ArrowLeft, BookOpen, Loader2 } from "lucide-react";
+import { AudioPlayer } from "@/components/AudioPlayer";
+import { fetchStories } from "@/lib/supabaseQueries";
+import { StoryRow } from "@/lib/supabaseQueries";
 
 export default function Cultural() {
   const navigate = useNavigate();
+  const [stories, setStories] = useState<StoryRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const audioRefs = useRef<Map<string, HTMLAudioElement>>(new Map());
 
-  const culturalItems = [
-    {
-      id: 'folk_001',
-      type: 'story',
-      title: 'The Wise Owl and the River',
-      description: 'A traditional Toto folk story about wisdom and nature',
-      duration: '3 min',
-      icon: BookOpen
-    },
-    {
-      id: 'folk_002',
-      type: 'story',
-      title: 'The Mountain Spirit',
-      description: 'An ancient tale passed down through generations',
-      duration: '4 min',
-      icon: BookOpen
-    },
-    {
-      id: 'song_001',
-      type: 'song',
-      title: 'Harvest Song',
-      description: 'Traditional Toto song sung during harvest season',
-      duration: '2 min',
-      icon: Music
-    },
-    {
-      id: 'song_002',
-      type: 'song',
-      title: 'Children\'s Play Song',
-      description: 'A joyful song children sing while playing',
-      duration: '2 min',
-      icon: Music
+  useEffect(() => {
+    const loadStories = async () => {
+      try {
+        setLoading(true);
+        const folkStories = await fetchStories();
+        setStories(folkStories);
+      } catch (error) {
+        console.error('Failed to load stories:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStories();
+  }, []);
+
+  // Stop all other audio players when a new one starts
+  const handleAudioPlayStart = (currentAudioId: string) => {
+    audioRefs.current.forEach((audio, audioId) => {
+      if (audioId !== currentAudioId && audio && !audio.paused) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+    });
+  };
+
+  // Register audio element
+  const registerAudio = (audioId: string, audioElement: HTMLAudioElement | null) => {
+    if (audioElement) {
+      audioRefs.current.set(audioId, audioElement);
+    } else {
+      audioRefs.current.delete(audioId);
     }
-  ];
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -54,56 +61,90 @@ export default function Cultural() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-primary mb-2">Cultural Corner</h1>
+          <h1 className="text-4xl font-bold text-primary mb-2">Stories</h1>
           <p className="text-lg text-muted-foreground">
-            Explore traditional Toto folk stories and songs
+            Explore traditional Toto folk stories
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-          {culturalItems.map((item) => {
-            const Icon = item.icon;
-            return (
+        {loading ? (
+          <div className="flex justify-center items-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : stories.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">No stories available yet.</p>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+            {stories.map((story) => (
               <Card
-                key={item.id}
+                key={story.id}
                 className="card-elevated hover:scale-105 transition-transform animate-slide-in"
               >
                 <CardContent className="p-6 space-y-4">
-                  <div className="flex items-start gap-4">
-                    <div className="p-3 rounded-lg bg-secondary/20">
-                      <Icon className="h-8 w-8 text-secondary" />
+                  {story.image_url && (
+                    <div className="relative aspect-video rounded-lg overflow-hidden mb-4">
+                      <img
+                        src={story.image_url}
+                        alt={story.title}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent flex items-end">
+                        <BookOpen className="h-8 w-8 text-white m-4" />
+                      </div>
                     </div>
+                  )}
+                  <div className="flex items-start gap-4">
+                    {!story.image_url && (
+                      <div className="p-3 rounded-lg bg-secondary/20">
+                        <BookOpen className="h-8 w-8 text-secondary" />
+                      </div>
+                    )}
                     <div className="flex-1">
-                      <h3 className="font-bold text-xl mb-2">{item.title}</h3>
+                      <h3 className="font-bold text-xl mb-2">{story.title}</h3>
                       <p className="text-sm text-muted-foreground mb-3">
-                        {item.description}
+                        {story.cultural_meaning || story.english_narration.substring(0, 100) + '...'}
                       </p>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-primary font-medium">
-                          Duration: {item.duration}
-                        </span>
+                      <div className="flex items-center justify-between mb-4">
+                        {story.duration && (
+                          <span className="text-sm text-primary font-medium">
+                            Duration: {story.duration}
+                          </span>
+                        )}
                         <span className="text-xs bg-muted px-2 py-1 rounded">
-                          {item.type === 'story' ? 'Folk Story' : 'Traditional Song'}
+                          {story.type || 'Folk Story'}
                         </span>
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button className="flex-1" size="sm">
-                      🇹 Play Toto
-                    </Button>
-                    <Button variant="secondary" className="flex-1" size="sm">
-                      🇬 Play English
-                    </Button>
+                  <div className="flex gap-2 justify-center">
+                    {story.audio_toto_url && (
+                      <AudioPlayer
+                        audioUrl={story.audio_toto_url}
+                        label="Toto narration"
+                        variant="toto"
+                        audioId={`${story.id}-toto`}
+                        onPlayStart={() => handleAudioPlayStart(`${story.id}-toto`)}
+                        onAudioRef={(audio) => registerAudio(`${story.id}-toto`, audio)}
+                      />
+                    )}
+                    {story.audio_english_url && (
+                      <AudioPlayer
+                        audioUrl={story.audio_english_url}
+                        label="English narration"
+                        variant="english"
+                        audioId={`${story.id}-english`}
+                        onPlayStart={() => handleAudioPlayStart(`${story.id}-english`)}
+                        onAudioRef={(audio) => registerAudio(`${story.id}-english`, audio)}
+                      />
+                    )}
                   </div>
-                  <p className="text-xs text-muted-foreground text-center">
-                    Audio recordings coming soon
-                  </p>
                 </CardContent>
               </Card>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        )}
 
         <div className="text-center mt-12">
           <Card className="max-w-2xl mx-auto card-elevated">
