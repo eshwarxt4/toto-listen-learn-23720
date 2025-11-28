@@ -118,12 +118,9 @@ export default function WordDetail() {
                   <h3 className="font-semibold text-lg">Usage Example</h3>
                   <div className="space-y-2">
                     <p className="text-lg text-primary">{word.usageSentenceToto}</p>
-                    {showTransliteration && (
-                      <p className="text-sm text-muted-foreground italic">
-                        (Transliteration would go here)
-                      </p>
+                    {word.usageSentenceToto !== word.usageSentenceEnglish && (
+                      <p className="text-lg text-foreground">{word.usageSentenceEnglish}</p>
                     )}
-                    <p className="text-lg text-foreground">{word.usageSentenceEnglish}</p>
                   </div>
                 </CardContent>
               </Card>

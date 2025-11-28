@@ -157,7 +157,7 @@ export default function Dashboard() {
         <section className="animate-fade-in">
           <h2 className="text-3xl font-bold mb-2 text-center">Word of the Day</h2>
           <p className="text-center text-muted-foreground mb-6">
-            Swipe ← to skip • Swipe → to save • Swipe ↑ to learn more
+            Swipe left to skip • Swipe right to save • Swipe up to learn more
           </p>
           {loading || !currentWord ? (
             <div className="flex justify-center items-center py-12">

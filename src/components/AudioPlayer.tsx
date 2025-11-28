@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Volume2, Loader2, AlertCircle } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
 
 interface AudioPlayerProps {
   audioUrl: string;
@@ -40,31 +39,70 @@ export const AudioPlayer = ({
     };
   }, [onAudioRef, audioUrl]);
 
+  // Reset audio element when URL changes
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio || !isValidUrl) return;
 
-    const handleError = () => {
+    // Reset audio state when URL changes
+    setIsPlaying(false);
+    setIsLoading(false);
+    setHasError(false);
+    
+    // Reset the audio element
+    audio.pause();
+    audio.currentTime = 0;
+    audio.load();
+  }, [audioUrl, isValidUrl]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !isValidUrl) return;
+
+    const handleError = (event: Event) => {
       const error = audio.error;
+      let errorMessage = 'Unknown error';
+      let errorCode = 'Unknown';
+      
+      if (error) {
+        switch (error.code) {
+          case MediaError.MEDIA_ERR_ABORTED:
+            errorCode = 'Aborted';
+            errorMessage = 'Audio playback was aborted';
+            break;
+          case MediaError.MEDIA_ERR_NETWORK:
+            errorCode = 'Network error';
+            errorMessage = 'Network error while loading audio';
+            break;
+          case MediaError.MEDIA_ERR_DECODE:
+            errorCode = 'Decode error';
+            errorMessage = 'Audio decoding error';
+            break;
+          case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+            errorCode = 'Source not supported';
+            errorMessage = 'Audio format not supported';
+            break;
+          default:
+            errorMessage = error.message || 'Unknown error';
+        }
+      } else {
+        errorMessage = 'Failed to load audio file. The file may not exist or is inaccessible.';
+        errorCode = 'Load failed';
+      }
+
       console.error('Audio playback error:', {
         url: audioUrl,
         variant,
-        message: error?.message || 'Unknown error',
+        message: errorMessage,
         code: error?.code,
-        errorCode: error?.code === MediaError.MEDIA_ERR_ABORTED ? 'Aborted' :
-                   error?.code === MediaError.MEDIA_ERR_NETWORK ? 'Network error' :
-                   error?.code === MediaError.MEDIA_ERR_DECODE ? 'Decode error' :
-                   error?.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED ? 'Source not supported' :
-                   'Unknown'
+        errorCode,
+        networkState: audio.networkState,
+        readyState: audio.readyState
       });
+      
       setIsPlaying(false);
       setIsLoading(false);
       setHasError(true);
-      toast({
-        title: "Audio Error",
-        description: `Failed to play ${variant} audio. Please check if the file exists.`,
-        variant: "destructive",
-      });
     };
 
     const handleLoadStart = () => {
@@ -76,8 +114,12 @@ export const AudioPlayer = ({
       setIsLoading(false);
     };
 
+    const handleLoadedData = () => {
+      setIsLoading(false);
+    };
+
     const handleLoadError = () => {
-      handleError();
+      handleError(new Event('error'));
     };
 
     const handlePauseEvent = () => {
@@ -88,6 +130,7 @@ export const AudioPlayer = ({
     audio.addEventListener('error', handleError);
     audio.addEventListener('loadstart', handleLoadStart);
     audio.addEventListener('canplay', handleCanPlay);
+    audio.addEventListener('loadeddata', handleLoadedData);
     audio.addEventListener('stalled', handleLoadError);
     audio.addEventListener('abort', handleLoadError);
     audio.addEventListener('pause', handlePauseEvent);
@@ -96,52 +139,73 @@ export const AudioPlayer = ({
       audio.removeEventListener('error', handleError);
       audio.removeEventListener('loadstart', handleLoadStart);
       audio.removeEventListener('canplay', handleCanPlay);
+      audio.removeEventListener('loadeddata', handleLoadedData);
       audio.removeEventListener('stalled', handleLoadError);
       audio.removeEventListener('abort', handleLoadError);
       audio.removeEventListener('pause', handlePauseEvent);
     };
-  }, [audioUrl, variant]);
+  }, [audioUrl, variant, isValidUrl]);
 
   const handlePlay = async () => {
     if (!isValidUrl) {
       console.warn('Invalid audio URL:', audioUrl);
-      toast({
-        title: "Invalid Audio URL",
-        description: "The audio file URL is not configured. Please check your Supabase settings.",
-        variant: "destructive",
-      });
       return;
     }
 
     if (!audioRef.current) return;
 
+    const audio = audioRef.current;
+
     try {
+      // Check if audio is ready to play
+      if (audio.readyState < HTMLMediaElement.HAVE_METADATA) {
+        setIsLoading(true);
+        setHasError(false);
+        
+        // Wait for audio to be ready
+        await new Promise<void>((resolve, reject) => {
+          const handleCanPlay = () => {
+            audio.removeEventListener('canplay', handleCanPlay);
+            audio.removeEventListener('error', handleError);
+            resolve();
+          };
+          
+          const handleError = () => {
+            audio.removeEventListener('canplay', handleCanPlay);
+            audio.removeEventListener('error', handleError);
+            reject(new Error('Audio failed to load'));
+          };
+          
+          audio.addEventListener('canplay', handleCanPlay);
+          audio.addEventListener('error', handleError);
+          
+          // Load the audio if not already loading
+          if (audio.readyState === HTMLMediaElement.HAVE_NOTHING) {
+            audio.load();
+          }
+        });
+      }
+
       // Notify parent to stop other audio players
       if (onPlayStart) {
         onPlayStart();
       }
 
       setIsPlaying(true);
-      setIsLoading(true);
+      setIsLoading(false);
       setHasError(false);
       
       // Reset audio to beginning if already played
-      if (audioRef.current.currentTime > 0) {
-        audioRef.current.currentTime = 0;
+      if (audio.currentTime > 0) {
+        audio.currentTime = 0;
       }
       
-      await audioRef.current.play();
-      setIsLoading(false);
+      await audio.play();
     } catch (error) {
       console.error('Error playing audio:', error);
       setIsPlaying(false);
       setIsLoading(false);
       setHasError(true);
-      toast({
-        title: "Playback Error",
-        description: `Could not play ${variant} audio. ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: "destructive",
-      });
     }
   };
 
@@ -184,7 +248,8 @@ export const AudioPlayer = ({
           src={audioUrl} 
           onEnded={handleEnded}
           onPause={handlePause}
-          preload="metadata"
+          preload="none"
+          crossOrigin="anonymous"
         />
       ) : (
         <div className="text-xs text-destructive">Invalid URL</div>
