@@ -106,12 +106,9 @@ export default function StoryViewer() {
 
             <div className="text-center space-y-4">
               <p className="text-2xl font-semibold text-primary">{slide.toto}</p>
-              {showTransliteration && (
-                <p className="text-sm text-muted-foreground italic">
-                  (Transliteration would go here)
-                </p>
+              {slide.toto !== slide.english && (
+                <p className="text-xl text-foreground">{slide.english}</p>
               )}
-              <p className="text-xl text-foreground">{slide.english}</p>
             </div>
 
             <div className="flex justify-center gap-8">
